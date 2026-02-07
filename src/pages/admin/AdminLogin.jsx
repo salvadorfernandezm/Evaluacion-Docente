@@ -28,7 +28,7 @@ export default function AdminLogin() {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <img 
-            src="https://www.genspark.ai/api/files/s/PQ0EbNzP" 
+            src="/logo.png"
             alt="Logo Posgrado UJED" 
             className="h-24 w-auto mx-auto mb-4 bg-white rounded-full p-2"
           />
