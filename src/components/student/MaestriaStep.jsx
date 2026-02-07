@@ -1,128 +1,84 @@
-import React, { useState, useEffect } from 'react'
-import { useEvaluationStore } from '../../store/evaluationStore'
+import React, { useEffect, useState } from 'react'
 import { supabase } from '../../config/supabase'
-import { GraduationCap, ChevronRight, ChevronLeft } from 'lucide-react'
+import { useEvaluationStore } from '../../store/evaluationStore'
 
 export default function MaestriaStep({ onNext, onBack }) {
-  const { setSelectedMaestria } = useEvaluationStore()
+  const { selectedMaestria, setSelectedMaestria } = useEvaluationStore()
   const [maestrias, setMaestrias] = useState([])
-  const [selectedId, setSelectedId] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    const cargarMaestrias = async () => {
+      try {
+        setLoading(true)
+        const { data, error } = await supabase
+          .from('maestrias')
+          .select('id, nombre, activa, orden')
+          .eq('activa', true)
+          .order('orden', { ascending: true })
+          .order('nombre', { ascending: true })
+        if (error) throw error
+
+        // Fallback de seguridad en cliente
+        const maesOrdenadas = (data || []).slice().sort((a, b) => {
+          const oa = a?.orden ?? Number.MAX_SAFE_INTEGER
+          const ob = b?.orden ?? Number.MAX_SAFE_INTEGER
+          if (oa !== ob) return oa - ob
+          return (a?.nombre ?? '').localeCompare(b?.nombre ?? '', 'es')
+        })
+        setMaestrias(maesOrdenadas)
+      } catch (e) {
+        console.error('[Alumno] cargarMaestrias:', e)
+        alert('No se pudieron cargar las maestrías.')
+      } finally {
+        setLoading(false)
+      }
+    }
     cargarMaestrias()
   }, [])
 
-  const cargarMaestrias = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('maestrias')
-        .select('*')
-        .eq('activa', true)
-        .order('nombre')
-      
-      if (error) throw error
-      setMaestrias(data || [])
-    } catch (error) {
-      console.error('Error cargando maestrías:', error)
-    } finally {
-      setLoading(false)
+  const handleContinuar = () => {
+    if (!selectedMaestria) {
+      alert('Selecciona una maestría para continuar.')
+      return
     }
-  }
-
-  const handleNext = () => {
-    if (selectedId) {
-      const maestria = maestrias.find(m => m.id === selectedId)
-      setSelectedMaestria(maestria)
-      onNext()
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="card text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Cargando maestrías...</p>
-      </div>
-    )
-  }
-
-  if (maestrias.length === 0) {
-    return (
-      <div className="card text-center py-12">
-        <p className="text-gray-600 mb-4">No hay maestrías activas en este momento.</p>
-        <button onClick={onBack} className="btn-secondary">
-          Volver
-        </button>
-      </div>
-    )
+    onNext?.()
   }
 
   return (
-    <div className="card max-w-2xl mx-auto">
-      <div className="flex justify-center mb-6">
-        <div className="bg-primary-100 p-4 rounded-full">
-          <GraduationCap className="h-12 w-12 text-primary-600" />
+    <div className="card">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">Selecciona tu Maestría</h2>
+
+      {loading ? (
+        <p className="text-sm text-gray-600">Cargando maestrías…</p>
+      ) : maestrias.length === 0 ? (
+        <p className="text-sm text-red-600">No hay maestrías activas.</p>
+      ) : (
+        <div className="space-y-2">
+          {maestrias.map(m => (
+            <label
+              key={m.id}
+              className={`
+                flex items-center gap-3 border rounded-lg p-3 cursor-pointer
+                ${selectedMaestria?.id === m.id ? 'border-primary-600 bg-primary-50' : 'border-gray-200 hover:border-primary-300'}
+              `}
+            >
+              <input
+                type="radio"
+                className="h-4 w-4"
+                checked={selectedMaestria?.id === m.id}
+                onChange={() => setSelectedMaestria(m)}
+              />
+              <span className="text-gray-900 font-medium">{m.nombre}</span>
+              <span className="ml-auto text-xs text-gray-500">orden: {m.orden ?? '—'}</span>
+            </label>
+          ))}
         </div>
-      </div>
+      )}
 
-      <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
-        Selecciona tu Maestría
-      </h2>
-      <p className="text-center text-gray-600 mb-8">
-        Elige la maestría en la que estás inscrito
-      </p>
-
-      <div className="space-y-3 mb-8">
-        {maestrias.map((maestria) => (
-          <div
-            key={maestria.id}
-            onClick={() => setSelectedId(maestria.id)}
-            className={`
-              border-2 rounded-lg p-4 cursor-pointer transition-all
-              ${selectedId === maestria.id 
-                ? 'border-primary-600 bg-primary-50' 
-                : 'border-gray-200 hover:border-primary-300 bg-white'}
-            `}
-          >
-            <div className="flex items-center">
-              <div className={`
-                w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center
-                ${selectedId === maestria.id 
-                  ? 'border-primary-600 bg-primary-600' 
-                  : 'border-gray-300'}
-              `}>
-                {selectedId === maestria.id && (
-                  <div className="w-2 h-2 bg-white rounded-full"></div>
-                )}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium text-gray-900">
-                  {maestria.nombre}
-                </h3>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex justify-between">
-        <button
-          onClick={onBack}
-          className="btn-secondary flex items-center space-x-2"
-        >
-          <ChevronLeft className="h-5 w-5" />
-          <span>Atrás</span>
-        </button>
-        <button
-          onClick={handleNext}
-          disabled={!selectedId}
-          className="btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <span>Continuar</span>
-          <ChevronRight className="h-5 w-5" />
-        </button>
+      <div className="flex justify-between pt-6">
+        <button onClick={onBack} className="btn-secondary">Atrás</button>
+        <button onClick={handleContinuar} className="btn-primary">Continuar</button>
       </div>
     </div>
   )
