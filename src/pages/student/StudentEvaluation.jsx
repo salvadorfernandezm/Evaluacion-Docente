@@ -119,7 +119,7 @@ export default function StudentEvaluation() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <img 
-                src="https://www.genspark.ai/api/files/s/PQ0EbNzP" 
+                src="/logo.png" 
                 alt="Logo Posgrado UJED" 
                 className="h-16 w-auto"
               />
