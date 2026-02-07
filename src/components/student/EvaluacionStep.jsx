@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { REACTIVOS } from '../../constants/reactivos'
 import { ClipboardCheck, ChevronRight, ChevronLeft } from 'lucide-react'
 import { useEvaluationStore } from '../../store/evaluationStore'
@@ -33,14 +33,19 @@ export default function EvaluacionStep({ onNext, onBack, profesores, loading }) 
   const handleCalificacionChange = (reactivo, valor) => {
     setCalificaciones(prev => ({
       ...prev,
-      [reactivo]: parseInt(valor)
+      [reactivo]: parseInt(valor, 10)
     }))
   }
 
   const validateForm = () => {
     const newErrors = {}
 
-    // Validar que todos los reactivos estén calificados
+    // Validar profesor si hay varios
+    if (profesores.length > 1 && !selectedProfesor) {
+      newErrors['profesor'] = true
+    }
+
+    // Validar reactivos 1..17
     for (let i = 1; i <= 17; i++) {
       if (calificaciones[`reactivo_${i}`] === undefined) {
         newErrors[`reactivo_${i}`] = true
@@ -53,31 +58,36 @@ export default function EvaluacionStep({ onNext, onBack, profesores, loading }) 
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    
-    if (validateForm()) {
-      addEvaluacion({
-        profesor: selectedProfesor,
-        calificaciones,
-        comentarios
-      })
-      
-      // Reset para siguiente evaluación
-      setSelectedProfesor(null)
-      setCalificaciones({})
-      setComentarios('')
-      
-      onNext()
-    } else {
-      alert('Por favor, califica todos los reactivos antes de continuar.')
+
+    if (!validateForm()) {
+      if (errors['profesor']) {
+        alert('Selecciona el profesor/a antes de continuar.')
+      } else {
+        alert('Por favor, califica todos los reactivos antes de continuar.')
+      }
+      return
     }
+
+    addEvaluacion({
+      profesor: selectedProfesor || profesores[0], // si solo hay uno
+      calificaciones,
+      comentarios
+    })
+
+    // Reset
+    setSelectedProfesor(null)
+    setCalificaciones({})
+    setComentarios('')
+
+    onNext()
   }
 
   // Si solo hay un profesor, seleccionarlo automáticamente
-  React.useEffect(() => {
+  useEffect(() => {
     if (profesores.length === 1 && !selectedProfesor) {
       setSelectedProfesor(profesores[0])
     }
-  }, [profesores])
+  }, [profesores, selectedProfesor])
 
   return (
     <div className="card">
@@ -130,6 +140,9 @@ export default function EvaluacionStep({ onNext, onBack, profesores, loading }) 
                 </div>
               </div>
             ))}
+            {errors['profesor'] && (
+              <p className="text-xs text-red-600">Debes seleccionar un profesor(a).</p>
+            )}
           </div>
         </div>
       )}
@@ -170,9 +183,9 @@ export default function EvaluacionStep({ onNext, onBack, profesores, loading }) 
                       {index + 1}. {reactivo}
                     </span>
                   </label>
-                  
+
                   <div className="flex items-center space-x-2">
-                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((valor) => (
+                    {[0,1,2,3,4,5,6,7,8,9,10].map((valor) => (
                       <button
                         key={valor}
                         type="button"
@@ -180,9 +193,9 @@ export default function EvaluacionStep({ onNext, onBack, profesores, loading }) 
                         className={`
                           w-10 h-10 rounded-lg font-medium transition-all
                           ${calificaciones[key] === valor
-                            ? valor <= 6 
-                              ? 'bg-red-500 text-white' 
-                              : valor <= 8.5 
+                            ? valor <= 6
+                              ? 'bg-red-500 text-white'
+                              : valor <= 8.5
                                 ? 'bg-orange-500 text-white'
                                 : 'bg-green-500 text-white'
                             : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}
@@ -212,18 +225,11 @@ export default function EvaluacionStep({ onNext, onBack, profesores, loading }) 
 
           {/* Botones */}
           <div className="flex justify-between pt-4">
-            <button
-              type="button"
-              onClick={onBack}
-              className="btn-secondary flex items-center space-x-2"
-            >
+            <button type="button" onClick={onBack} className="btn-secondary flex items-center space-x-2">
               <ChevronLeft className="h-5 w-5" />
               <span>Atrás</span>
             </button>
-            <button
-              type="submit"
-              className="btn-primary flex items-center space-x-2"
-            >
+            <button type="submit" className="btn-primary flex items-center space-x-2">
               <span>Continuar</span>
               <ChevronRight className="h-5 w-5" />
             </button>
