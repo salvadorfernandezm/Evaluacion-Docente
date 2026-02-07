@@ -49,7 +49,7 @@ export default function AdminLayout({ children }) {
                 {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
               <img 
-                src="https://www.genspark.ai/api/files/s/PQ0EbNzP" 
+                src="/logo.png" 
                 alt="Logo" 
                 className="h-12 w-auto"
               />
